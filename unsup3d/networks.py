@@ -133,7 +133,7 @@ class PerceptualLoss(nn.Module):
         self.mean_rgb = jt.array([0.485, 0.456, 0.406])
         self.std_rgb = jt.array([0.229, 0.224, 0.225])
         vgg_pretrained_features = models.vgg.vgg16().features
-        vgg_pretrained_features.load('init_models/vgg_pretrained_features.pth')
+        vgg_pretrained_features.load('init_models/vgg_pretrained_features.pkl')
         self.slice1 = nn.Sequential()
         self.slice2 = nn.Sequential()
         self.slice3 = nn.Sequential()
