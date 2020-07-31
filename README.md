@@ -1,4 +1,4 @@
-Jittor Implementation for the pepar Unsupervised Learning of Probably Symmetric Deformable 3D Objects from Images in the Wild (ECCV oral).
+Jittor Implementation for the pepar Unsupervised Learning of Probably Symmetric Deformable 3D Objects from Images in the Wild (CVPR 2020 oral).
 
 ## Citation
 ```
