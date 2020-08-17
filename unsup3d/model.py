@@ -216,25 +216,25 @@ class Unsup3D():
         canon_normal_rotate_grid = jt.stack(canon_normal_rotate_grid, 0).unsqueeze(0)  # (1,T,C,H,W)
 
         ## write summary
-        logger.add_scalar('Loss/loss_total', self.loss_total, total_iter)
-        logger.add_scalar('Loss/loss_l1_im', self.loss_l1_im, total_iter)
-        logger.add_scalar('Loss/loss_l1_im_flip', self.loss_l1_im_flip, total_iter)
-        logger.add_scalar('Loss/loss_perc_im', self.loss_perc_im, total_iter)
-        logger.add_scalar('Loss/loss_perc_im_flip', self.loss_perc_im_flip, total_iter)
+        logger.add_scalar('Loss/loss_total', self.loss_total.numpy(), total_iter)
+        logger.add_scalar('Loss/loss_l1_im', self.loss_l1_im.numpy(), total_iter)
+        logger.add_scalar('Loss/loss_l1_im_flip', self.loss_l1_im_flip.numpy(), total_iter)
+        logger.add_scalar('Loss/loss_perc_im', self.loss_perc_im.numpy(), total_iter)
+        logger.add_scalar('Loss/loss_perc_im_flip', self.loss_perc_im_flip.numpy(), total_iter)
 
-        logger.add_histogram('Depth/canon_depth_raw_hist', canon_depth_raw_hist, total_iter)
+        logger.add_histogram('Depth/canon_depth_raw_hist', canon_depth_raw_hist.numpy(), total_iter)
         vlist = ['view_rx', 'view_ry', 'view_rz', 'view_tx', 'view_ty', 'view_tz']
         for i in range(self.view.shape[1]):
-            logger.add_histogram('View/'+vlist[i], self.view[:,i], total_iter)
-        logger.add_histogram('Light/canon_light_a', self.canon_light_a, total_iter)
-        logger.add_histogram('Light/canon_light_b', self.canon_light_b, total_iter)
+            logger.add_histogram('View/'+vlist[i], self.view[:,i].numpy(), total_iter)
+        logger.add_histogram('Light/canon_light_a', self.canon_light_a.numpy(), total_iter)
+        logger.add_histogram('Light/canon_light_b', self.canon_light_b.numpy(), total_iter)
         llist = ['canon_light_dx', 'canon_light_dy', 'canon_light_dz']
         for i in range(self.canon_light_d.shape[1]):
-            logger.add_histogram('Light/'+llist[i], self.canon_light_d[:,i], total_iter)
+            logger.add_histogram('Light/'+llist[i], self.canon_light_d[:,i].numpy(), total_iter)
 
         def log_grid_image(label, im, nrow=int(math.ceil(math.sqrt(b0))), iter=total_iter):
             im_grid = jt.make_grid(im, nrow=nrow)
-            logger.add_image(label, im_grid, iter)
+            logger.add_image(label, im_grid.numpy(), iter)
 
         log_grid_image('Image/input_image_symline', input_im_symline)
         log_grid_image('Image/canonical_albedo', canon_albedo)
@@ -250,20 +250,20 @@ class Unsup3D():
         log_grid_image('Depth/canonical_normal', canon_normal)
         log_grid_image('Depth/recon_normal', recon_normal)
 
-        logger.add_histogram('Image/canonical_albedo_hist', canon_albedo, total_iter)
-        logger.add_histogram('Image/canonical_diffuse_shading_hist', canon_diffuse_shading, total_iter)
+        logger.add_histogram('Image/canonical_albedo_hist', canon_albedo.numpy(), total_iter)
+        logger.add_histogram('Image/canonical_diffuse_shading_hist', canon_diffuse_shading.numpy(), total_iter)
 
         log_grid_image('Conf/conf_map_l1', conf_map_l1)
-        logger.add_histogram('Conf/conf_sigma_l1_hist', self.conf_sigma_l1[:,:1], total_iter)
+        logger.add_histogram('Conf/conf_sigma_l1_hist', self.conf_sigma_l1[:,:1].numpy(), total_iter)
         log_grid_image('Conf/conf_map_l1_flip', conf_map_l1_flip)
-        logger.add_histogram('Conf/conf_sigma_l1_flip_hist', self.conf_sigma_l1[:,1:], total_iter)
+        logger.add_histogram('Conf/conf_sigma_l1_flip_hist', self.conf_sigma_l1[:,1:].numpy(), total_iter)
         log_grid_image('Conf/conf_map_percl', conf_map_percl)
-        logger.add_histogram('Conf/conf_sigma_percl_hist', self.conf_sigma_percl[:,:1], total_iter)
+        logger.add_histogram('Conf/conf_sigma_percl_hist', self.conf_sigma_percl[:,:1].numpy(), total_iter)
         log_grid_image('Conf/conf_map_percl_flip', conf_map_percl_flip)
-        logger.add_histogram('Conf/conf_sigma_percl_flip_hist', self.conf_sigma_percl[:,1:], total_iter)
+        logger.add_histogram('Conf/conf_sigma_percl_flip_hist', self.conf_sigma_percl[:,1:].numpy(), total_iter)
 
-        logger.add_video('Image_rotate/recon_rotate', canon_im_rotate_grid, total_iter, fps=4)
-        logger.add_video('Image_rotate/canon_normal_rotate', canon_normal_rotate_grid, total_iter, fps=4)
+        logger.add_video('Image_rotate/recon_rotate', canon_im_rotate_grid.numpy(), total_iter, fps=4)
+        logger.add_video('Image_rotate/canon_normal_rotate', canon_normal_rotate_grid.numpy(), total_iter, fps=4)
 
         # visualize images and accuracy if gt is loaded
         if self.load_gt_depth:
@@ -272,10 +272,10 @@ class Unsup3D():
             sie_map_masked = self.sie_map_masked[:b0].detach().unsqueeze(1) *1000
             norm_err_map_masked = self.norm_err_map_masked[:b0].detach().unsqueeze(1) /100
 
-            logger.add_scalar('Acc_masked/MAE_masked', self.acc_mae_masked.mean(), total_iter)
-            logger.add_scalar('Acc_masked/MSE_masked', self.acc_mse_masked.mean(), total_iter)
-            logger.add_scalar('Acc_masked/SIE_masked', self.acc_sie_masked.mean(), total_iter)
-            logger.add_scalar('Acc_masked/NorErr_masked', self.acc_normal_masked.mean(), total_iter)
+            logger.add_scalar('Acc_masked/MAE_masked', self.acc_mae_masked.mean().numpy(), total_iter)
+            logger.add_scalar('Acc_masked/MSE_masked', self.acc_mse_masked.mean().numpy(), total_iter)
+            logger.add_scalar('Acc_masked/SIE_masked', self.acc_sie_masked.mean().numpy(), total_iter)
+            logger.add_scalar('Acc_masked/NorErr_masked', self.acc_normal_masked.mean().numpy(), total_iter)
 
             log_grid_image('Depth_gt/depth_gt', depth_gt)
             log_grid_image('Depth_gt/normal_gt', normal_gt)
