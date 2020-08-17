@@ -14,7 +14,7 @@ Check the configuration files in `experiments/` and run experiments, eg:
 git clone https://github.com/zhouwy19/unsup3d_jittor
 cd unsup3d_jittor
 bash install.sh
-eager_execution=1 python3.7 run.py --config experiments/train_cat.yml
+python3.7 run.py --config experiments/train_cat.yml
 ```
 
 ## Citation
