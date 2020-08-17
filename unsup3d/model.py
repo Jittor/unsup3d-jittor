@@ -6,8 +6,6 @@ from jittor import nn
 from . import networks
 from . import utils
 from .renderer import Renderer
-import torch
-import torchvision
 
 EPS = 1e-7
 cnt = 0
@@ -170,8 +168,8 @@ class Unsup3D():
 
             # mask out background
             mask_gt = (self.depth_gt<self.depth_gt.max()).float()
-            mask_gt = (nn.pool(3,1,1,"mean")(mask_gt.unsqueeze(1)).squeeze(1) > 0.99).float()  # erode by 1 pixel
-            mask_pred = (nn.pool(3,1,1,"mean")(recon_im_mask[:b].unsqueeze(1)).squeeze(1) > 0.99).float()  # erode by 1 pixel
+            mask_gt = (nn.Pool(3,1,1,op="mean")(mask_gt.unsqueeze(1)).squeeze(1) > 0.99).float()  # erode by 1 pixel
+            mask_pred = (nn.Pool(3,1,1,op="mean")(recon_im_mask[:b].unsqueeze(1)).squeeze(1) > 0.99).float()  # erode by 1 pixel
             mask = mask_gt * mask_pred
             self.acc_mae_masked = ((self.recon_depth[:b] - self.depth_gt[:b]).abs() *mask).view(b,-1).sum(1) / mask.view(b,-1).sum(1)
             self.acc_mse_masked = (((self.recon_depth[:b] - self.depth_gt[:b])**2) *mask).view(b,-1).sum(1) / mask.view(b,-1).sum(1)
@@ -179,64 +177,63 @@ class Unsup3D():
             self.acc_sie_masked = (self.sie_map_masked.view(b,-1).sum(1) / mask.view(b,-1).sum(1)).sqrt()
             self.norm_err_map_masked = utils.compute_angular_distance(self.recon_normal[:b], self.normal_gt[:b], mask=mask)
             self.acc_normal_masked = self.norm_err_map_masked.view(b,-1).sum(1) / mask.view(b,-1).sum(1)
-
             metrics['SIE_masked'] = self.acc_sie_masked.mean()
             metrics['NorErr_masked'] = self.acc_normal_masked.mean()
 
         return metrics
 
     def visualize(self, logger, total_iter, max_bs=25):
-        b, c, h, w = torch.Tensor(self.input_im.numpy()).shape
+        b, c, h, w = self.input_im.shape
         b0 = min(max_bs, b)
 
         with jt.no_grad():
             ## render rotations
             v0 = jt.array([-0.1*math.pi/180*60,0,0,0,0,0]).repeat(b0,1)
-            canon_im_rotate = torch.Tensor(self.renderer.render_yaw(self.canon_im[:b0], self.canon_depth[:b0], v_before=v0, maxr=90).numpy()).detach().cpu() /2.+0.5  # (B,T,C,H,W)
-            canon_normal_rotate = torch.Tensor(self.renderer.render_yaw(self.canon_normal[:b0].permute(0,3,1,2), self.canon_depth[:b0], v_before=v0, maxr=90).numpy()).detach().cpu() /2.+0.5  # (B,T,C,H,W)
+            canon_im_rotate = self.renderer.render_yaw(self.canon_im[:b0], self.canon_depth[:b0], v_before=v0, maxr=90).detach() /2.+0.5  # (B,T,C,H,W)
+            canon_normal_rotate = self.renderer.render_yaw(self.canon_normal[:b0].permute(0,3,1,2), self.canon_depth[:b0], v_before=v0, maxr=90).detach() /2.+0.5  # (B,T,C,H,W)
 
-        input_im = torch.Tensor(self.input_im[:b0].numpy()).detach().cpu().numpy() /2+0.5
-        input_im_symline = torch.Tensor(self.input_im_symline[:b0].numpy()).detach().cpu() /2.+0.5
-        canon_albedo = torch.Tensor(self.canon_albedo[:b0].numpy()).detach().cpu() /2.+0.5
-        canon_im = torch.Tensor(self.canon_im[:b0].numpy()).detach().cpu() /2.+0.5
-        recon_im = torch.Tensor(self.recon_im[:b0].numpy()).detach().cpu() /2.+0.5
-        recon_im_flip = torch.Tensor(self.recon_im[b:b+b0].numpy()).detach().cpu() /2.+0.5
-        canon_depth_raw_hist = torch.Tensor(self.canon_depth_raw.numpy()).detach().unsqueeze(1).cpu()
-        canon_depth_raw = torch.Tensor(self.canon_depth_raw[:b0].numpy()).detach().unsqueeze(1).cpu() /2.+0.5
-        canon_depth = torch.Tensor(((self.canon_depth[:b0] -self.min_depth)/(self.max_depth-self.min_depth)).numpy()).detach().cpu().unsqueeze(1)
-        recon_depth = torch.Tensor(((self.recon_depth[:b0] -self.min_depth)/(self.max_depth-self.min_depth)).numpy()).detach().cpu().unsqueeze(1)
-        canon_diffuse_shading = torch.Tensor(self.canon_diffuse_shading[:b0].numpy()).detach().cpu()
-        canon_normal = torch.Tensor(self.canon_normal.permute(0,3,1,2)[:b0].numpy()).detach().cpu() /2+0.5
-        recon_normal = torch.Tensor(self.recon_normal.permute(0,3,1,2)[:b0].numpy()).detach().cpu() /2+0.5
-        conf_map_l1 = 1/(1+torch.Tensor(self.conf_sigma_l1[:b0,:1].numpy()).detach().cpu()+EPS)
-        conf_map_l1_flip = 1/(1+torch.Tensor(self.conf_sigma_l1[:b0,1:].numpy()).detach().cpu()+EPS)
-        conf_map_percl = 1/(1+torch.Tensor(self.conf_sigma_percl[:b0,:1].numpy()).detach().cpu()+EPS)
-        conf_map_percl_flip = 1/(1+torch.Tensor(self.conf_sigma_percl[:b0,1:].numpy()).detach().cpu()+EPS)
+        input_im = self.input_im[:b0].detach().numpy() /2+0.5
+        input_im_symline = self.input_im_symline[:b0].detach() /2.+0.5
+        canon_albedo = self.canon_albedo[:b0].detach() /2.+0.5
+        canon_im = self.canon_im[:b0].detach() /2.+0.5
+        recon_im = self.recon_im[:b0].detach() /2.+0.5
+        recon_im_flip = self.recon_im[b:b+b0].detach() /2.+0.5
+        canon_depth_raw_hist = self.canon_depth_raw.detach().unsqueeze(1)
+        canon_depth_raw = self.canon_depth_raw[:b0].detach().unsqueeze(1) /2.+0.5
+        canon_depth = ((self.canon_depth[:b0] -self.min_depth)/(self.max_depth-self.min_depth)).detach().unsqueeze(1)
+        recon_depth = ((self.recon_depth[:b0] -self.min_depth)/(self.max_depth-self.min_depth)).detach().unsqueeze(1)
+        canon_diffuse_shading = self.canon_diffuse_shading[:b0].detach()
+        canon_normal = self.canon_normal.permute(0,3,1,2)[:b0].detach() /2+0.5
+        recon_normal = self.recon_normal.permute(0,3,1,2)[:b0].detach() /2+0.5
+        conf_map_l1 = 1/(1+self.conf_sigma_l1[:b0,:1].detach()+EPS)
+        conf_map_l1_flip = 1/(1+self.conf_sigma_l1[:b0,1:].detach()+EPS)
+        conf_map_percl = 1/(1+self.conf_sigma_percl[:b0,:1].detach()+EPS)
+        conf_map_percl_flip = 1/(1+self.conf_sigma_percl[:b0,1:].detach()+EPS)
 
-        canon_im_rotate_grid = [torchvision.utils.make_grid(img, nrow=int(math.ceil(math.sqrt(b0)))) for img in torch.unbind(canon_im_rotate, 1)]  # [(C,H,W)]*T
-        canon_im_rotate_grid = torch.stack(canon_im_rotate_grid, 0).unsqueeze(0)  # (1,T,C,H,W)
-        canon_normal_rotate_grid = [torchvision.utils.make_grid(img, nrow=int(math.ceil(math.sqrt(b0)))) for img in torch.unbind(canon_normal_rotate, 1)]  # [(C,H,W)]*T
-        canon_normal_rotate_grid = torch.stack(canon_normal_rotate_grid, 0).unsqueeze(0)  # (1,T,C,H,W)
+        canon_im_rotate_grid = [jt.make_grid(img, nrow=int(math.ceil(math.sqrt(b0)))) for img in jt.unbind(canon_im_rotate, 1)]  # [(C,H,W)]*T
+        canon_im_rotate_grid = jt.stack(canon_im_rotate_grid, 0).unsqueeze(0)  # (1,T,C,H,W)
+        canon_normal_rotate_grid = [jt.make_grid(img, nrow=int(math.ceil(math.sqrt(b0)))) for img in jt.unbind(canon_normal_rotate, 1)]  # [(C,H,W)]*T
+        canon_normal_rotate_grid = jt.stack(canon_normal_rotate_grid, 0).unsqueeze(0)  # (1,T,C,H,W)
 
         ## write summary
-        logger.add_scalar('Loss/loss_total', torch.Tensor(self.loss_total.numpy()), total_iter)
-        logger.add_scalar('Loss/loss_l1_im', torch.Tensor(self.loss_l1_im.numpy()), total_iter)
-        logger.add_scalar('Loss/loss_l1_im_flip', torch.Tensor(self.loss_l1_im_flip.numpy()), total_iter)
-        logger.add_scalar('Loss/loss_perc_im', torch.Tensor(self.loss_perc_im.numpy()), total_iter)
-        logger.add_scalar('Loss/loss_perc_im_flip', torch.Tensor(self.loss_perc_im_flip.numpy()), total_iter)
+        logger.add_scalar('Loss/loss_total', self.loss_total, total_iter)
+        logger.add_scalar('Loss/loss_l1_im', self.loss_l1_im, total_iter)
+        logger.add_scalar('Loss/loss_l1_im_flip', self.loss_l1_im_flip, total_iter)
+        logger.add_scalar('Loss/loss_perc_im', self.loss_perc_im, total_iter)
+        logger.add_scalar('Loss/loss_perc_im_flip', self.loss_perc_im_flip, total_iter)
 
         logger.add_histogram('Depth/canon_depth_raw_hist', canon_depth_raw_hist, total_iter)
         vlist = ['view_rx', 'view_ry', 'view_rz', 'view_tx', 'view_ty', 'view_tz']
         for i in range(self.view.shape[1]):
-            logger.add_histogram('View/'+vlist[i], torch.Tensor(self.view[:,i].numpy()), total_iter)
-        logger.add_histogram('Light/canon_light_a', torch.Tensor(self.canon_light_a.numpy()), total_iter)
-        logger.add_histogram('Light/canon_light_b', torch.Tensor(self.canon_light_b.numpy()), total_iter)
+            logger.add_histogram('View/'+vlist[i], self.view[:,i], total_iter)
+        logger.add_histogram('Light/canon_light_a', self.canon_light_a, total_iter)
+        logger.add_histogram('Light/canon_light_b', self.canon_light_b, total_iter)
         llist = ['canon_light_dx', 'canon_light_dy', 'canon_light_dz']
         for i in range(self.canon_light_d.shape[1]):
-            logger.add_histogram('Light/'+llist[i], torch.Tensor(self.canon_light_d[:,i].numpy()), total_iter)
+            logger.add_histogram('Light/'+llist[i], self.canon_light_d[:,i], total_iter)
 
         def log_grid_image(label, im, nrow=int(math.ceil(math.sqrt(b0))), iter=total_iter):
-            im_grid = torchvision.utils.make_grid(im, nrow=nrow)
+            im_grid = jt.make_grid(im, nrow=nrow)
             logger.add_image(label, im_grid, iter)
 
         log_grid_image('Image/input_image_symline', input_im_symline)
@@ -257,28 +254,28 @@ class Unsup3D():
         logger.add_histogram('Image/canonical_diffuse_shading_hist', canon_diffuse_shading, total_iter)
 
         log_grid_image('Conf/conf_map_l1', conf_map_l1)
-        logger.add_histogram('Conf/conf_sigma_l1_hist', torch.Tensor(self.conf_sigma_l1[:,:1].numpy()), total_iter)
+        logger.add_histogram('Conf/conf_sigma_l1_hist', self.conf_sigma_l1[:,:1], total_iter)
         log_grid_image('Conf/conf_map_l1_flip', conf_map_l1_flip)
-        logger.add_histogram('Conf/conf_sigma_l1_flip_hist', torch.Tensor(self.conf_sigma_l1[:,1:].numpy()), total_iter)
+        logger.add_histogram('Conf/conf_sigma_l1_flip_hist', self.conf_sigma_l1[:,1:], total_iter)
         log_grid_image('Conf/conf_map_percl', conf_map_percl)
-        logger.add_histogram('Conf/conf_sigma_percl_hist', torch.Tensor(self.conf_sigma_percl[:,:1].numpy()), total_iter)
+        logger.add_histogram('Conf/conf_sigma_percl_hist', self.conf_sigma_percl[:,:1], total_iter)
         log_grid_image('Conf/conf_map_percl_flip', conf_map_percl_flip)
-        logger.add_histogram('Conf/conf_sigma_percl_flip_hist', torch.Tensor(self.conf_sigma_percl[:,1:].numpy()), total_iter)
+        logger.add_histogram('Conf/conf_sigma_percl_flip_hist', self.conf_sigma_percl[:,1:], total_iter)
 
         logger.add_video('Image_rotate/recon_rotate', canon_im_rotate_grid, total_iter, fps=4)
         logger.add_video('Image_rotate/canon_normal_rotate', canon_normal_rotate_grid, total_iter, fps=4)
 
         # visualize images and accuracy if gt is loaded
         if self.load_gt_depth:
-            depth_gt = torch.Tensor(((self.depth_gt[:b0] - self.min_depth)/(self.max_depth-self.min_depth)).numpy()).detach().cpu().unsqueeze(1)
-            normal_gt = torch.Tensor(self.normal_gt.permute(0,3,1,2)[:b0].numpy()).detach().cpu() /2+0.5
-            sie_map_masked = torch.Tensor(self.sie_map_masked[:b0].numpy()).detach().unsqueeze(1).cpu() *1000
-            norm_err_map_masked = torch.Tensor(self.norm_err_map_masked[:b0].numpy()).detach().unsqueeze(1).cpu() /100
+            depth_gt = ((self.depth_gt[:b0] - self.min_depth)/(self.max_depth-self.min_depth)).detach().unsqueeze(1)
+            normal_gt = self.normal_gt.permute(0,3,1,2)[:b0].detach() /2+0.5
+            sie_map_masked = self.sie_map_masked[:b0].detach().unsqueeze(1) *1000
+            norm_err_map_masked = self.norm_err_map_masked[:b0].detach().unsqueeze(1) /100
 
-            logger.add_scalar('Acc_masked/MAE_masked', torch.Tensor(self.acc_mae_masked.mean().numpy()), total_iter)
-            logger.add_scalar('Acc_masked/MSE_masked', torch.Tensor(self.acc_mse_masked.mean().numpy()), total_iter)
-            logger.add_scalar('Acc_masked/SIE_masked', torch.Tensor(self.acc_sie_masked.mean().numpy()), total_iter)
-            logger.add_scalar('Acc_masked/NorErr_masked', torch.Tensor(self.acc_normal_masked.mean().numpy()), total_iter)
+            logger.add_scalar('Acc_masked/MAE_masked', self.acc_mae_masked.mean(), total_iter)
+            logger.add_scalar('Acc_masked/MSE_masked', self.acc_mse_masked.mean(), total_iter)
+            logger.add_scalar('Acc_masked/SIE_masked', self.acc_sie_masked.mean(), total_iter)
+            logger.add_scalar('Acc_masked/NorErr_masked', self.acc_normal_masked.mean(), total_iter)
 
             log_grid_image('Depth_gt/depth_gt', depth_gt)
             log_grid_image('Depth_gt/normal_gt', normal_gt)
@@ -313,10 +310,11 @@ class Unsup3D():
         canon_light = jt.contrib.concat([self.canon_light_a, self.canon_light_b, self.canon_light_d], 1)[:b].numpy()
         view = self.view[:b].numpy()
 
-        canon_im_rotate_grid = [torchvision.utils.make_grid(img, nrow=int(math.ceil(b.sqrt()))) for img in torch.unbind(torch.Tensor(canon_im_rotate.numpy()),1)]  # [(C,H,W)]*T
-        canon_im_rotate_grid = torch.stack(canon_im_rotate_grid, 0).unsqueeze(0).numpy()  # (1,T,C,H,W)
-        canon_normal_rotate_grid = [torchvision.utils.make_grid(img, nrow=int(math.ceil(b.sqrt()))) for img in torch.unbind(torch.Tensor(canon_normal_rotate),1)]  # [(C,H,W)]*T
-        canon_normal_rotate_grid = torch.stack(canon_normal_rotate_grid, 0).unsqueeze(0).numpy()  # (1,T,C,H,W)
+        canon_im_rotate_grid = [jt.make_grid(img, nrow=int(math.ceil(math.sqrt(b)))) for img in jt.unbind(canon_im_rotate,1)]  # [(C,H,W)]*T
+
+        canon_im_rotate_grid = jt.stack(canon_im_rotate_grid, 0).unsqueeze(0).numpy()  # (1,T,C,H,W)
+        canon_normal_rotate_grid = [jt.make_grid(img, nrow=int(math.ceil(math.sqrt(b)))) for img in jt.unbind(canon_normal_rotate,1)]  # [(C,H,W)]*T
+        canon_normal_rotate_grid = jt.stack(canon_normal_rotate_grid, 0).unsqueeze(0).numpy()  # (1,T,C,H,W)
 
         sep_folder = True
         utils.save_images(save_dir, input_im, suffix='input_image', sep_folder=sep_folder)
@@ -342,19 +340,20 @@ class Unsup3D():
 
         # save scores if gt is loaded
         if self.load_gt_depth:
-            depth_gt = ((self.depth_gt[:b] -self.min_depth)/(self.max_depth-self.min_depth)).clamp(0,1).detach().cpu().unsqueeze(1).numpy()
-            normal_gt = self.normal_gt[:b].permute(0,3,1,2).detach().cpu().numpy() /2+0.5
+            depth_gt = ((self.depth_gt[:b] -self.min_depth)/(self.max_depth-self.min_depth)).clamp(0,1).detach().unsqueeze(1).numpy()
+            normal_gt = self.normal_gt[:b].permute(0,3,1,2).detach().numpy() /2+0.5
             utils.save_images(save_dir, depth_gt, suffix='depth_gt', sep_folder=sep_folder)
             utils.save_images(save_dir, normal_gt, suffix='normal_gt', sep_folder=sep_folder)
 
-            all_scores = torch.stack([
-                self.acc_mae_masked.detach().cpu(),
-                self.acc_mse_masked.detach().cpu(),
-                self.acc_sie_masked.detach().cpu(),
-                self.acc_normal_masked.detach().cpu()], 1)
+            all_scores = jt.stack([
+                self.acc_mae_masked.detach(),
+                self.acc_mse_masked.detach(),
+                self.acc_sie_masked.detach(),
+                self.acc_normal_masked.detach()], 1)
             if not hasattr(self, 'all_scores'):
-                self.all_scores = jt.array()
-            self.all_scores = jt.contrib.concat([self.all_scores, all_scores], 0)
+                self.all_scores = all_scores
+            else:
+                self.all_scores = jt.contrib.concat([self.all_scores, all_scores], 0)
 
     def save_scores(self, path):
         # save scores if gt is loaded
@@ -363,8 +362,8 @@ class Unsup3D():
                       MSE_masked, \
                       SIE_masked, \
                       NorErr_masked'
-            mean = self.all_scores.mean(0)
-            std = self.all_scores.std(0)
+            mean = self.all_scores.numpy().mean(0)
+            std = self.all_scores.numpy().std(0)
             header = header + '\nMean: ' + ',\t'.join(['%.8f'%x for x in mean])
             header = header + '\nStd: ' + ',\t'.join(['%.8f'%x for x in std])
-            utils.save_scores(path, self.all_scores, header=header)
+            utils.save_scores(path, self.all_scores.numpy(), header=header)

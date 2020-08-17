@@ -6,7 +6,7 @@ batch_size: 64
 checkpoint_dir: results/synface
 save_checkpoint_freq: 1
 keep_num_checkpoint: 2
-resume: true
+resume: false
 use_logger: true
 log_freq: 500
 

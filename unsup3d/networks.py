@@ -1,7 +1,6 @@
 import jittor as jt
 from jittor import nn
 from jittor import models
-from pdb import set_trace as st
 
 EPS = 1e-07
 

@@ -111,7 +111,7 @@ class StandardMetrics(Metrics):
         self.speed.update(mass / self.iteration_time.last_value)
 
     def get_data_dict(self):
-        data_dict = {k: v.get() for k,v in self.metrics.items()}
+        data_dict = {k: v.get().tolist() for k,v in self.metrics.items()}
         data_dict['speed'] = self.speed.get()
         return data_dict
 

@@ -6,13 +6,14 @@ from . import meters
 from . import utils
 from .dataloaders import get_data_loaders
 import jittor as jt
+import pickle
+import time
 
 class Trainer():
     def __init__(self, cfgs, model):
         self.num_epochs = cfgs.get('num_epochs', 30)
         self.batch_size = cfgs.get('batch_size', 64)
         self.checkpoint_dir = cfgs.get('checkpoint_dir', 'results')
-        self.checkpoint_load_dir = cfgs.get('checkpoint_load_dir', 'results')
         self.save_checkpoint_freq = cfgs.get('save_checkpoint_freq', 1)
         self.keep_num_checkpoint = cfgs.get('keep_num_checkpoint', 2)  # -1 for keeping all checkpoints
         self.resume = cfgs.get('resume', True)
@@ -29,47 +30,63 @@ class Trainer():
         self.model.trainer = self
         self.train_loader, self.val_loader, self.test_loader = get_data_loaders(cfgs)
 
-    def load_checkpoint(self, optim=True):
+    def load_checkpoint(self):
         """Search the specified/latest checkpoint in checkpoint_dir and load the model and optimizer."""
-        netD_path = os.path.join(self.checkpoint_load_dir, f'netD_last.pkl')
-        netA_path = os.path.join(self.checkpoint_load_dir, f'netA_last.pkl')
-        netL_path = os.path.join(self.checkpoint_load_dir, f'netL_last.pkl')
-        netV_path = os.path.join(self.checkpoint_load_dir, f'netV_last.pkl')
-        netC_path = os.path.join(self.checkpoint_load_dir, f'netC_last.pkl')
+        if self.checkpoint_name is not None:
+            checkpoint_path = os.path.join(self.checkpoint_dir, self.checkpoint_name)
+        else:
+            checkpoints = sorted(glob.glob(os.path.join(self.checkpoint_dir, '*.pkl')))
+            if len(checkpoints) == 0:
+                return 0
+            checkpoint_path = checkpoints[-1]
+            self.checkpoint_name = os.path.basename(checkpoint_path)
 
-        self.model.netD.load(netD_path)
-        self.model.netA.load(netA_path)
-        self.model.netL.load(netL_path)
-        self.model.netV.load(netV_path)
-        self.model.netC.load(netC_path)
+        with open(checkpoint_path, 'rb') as f:
+            params = pickle.load(f)
 
-        print(f"Loading checkpoint from {self.checkpoint_load_dir}")
+        self.model.netD.load_parameters(params['netD'])
+        self.model.netA.load_parameters(params['netA'])
+        self.model.netL.load_parameters(params['netL'])
+        self.model.netV.load_parameters(params['netV'])
+        self.model.netC.load_parameters(params['netC'])
 
-    def save_checkpoint(self, epoch, optim=True):
+        epoch = int(self.checkpoint_name[10:13])
+        print(f"Loading checkpoint from {checkpoint_path} with epoch {epoch}")
+        return epoch
+
+    def get_params(self, model):
+        params = model.parameters()
+        params_dict = {}
+        for p in params:
+            params_dict[p.name()] = p.data
+        return params_dict
+
+    def save_checkpoint(self, epoch):
         """Save model, optimizer, and metrics state to a checkpoint in checkpoint_dir for the specified epoch."""
         utils.xmkdir(self.checkpoint_dir)
-        netD_path = os.path.join(self.checkpoint_dir, f'netD_last.pkl')
-        netA_path = os.path.join(self.checkpoint_dir, f'netA_last.pkl')
-        netL_path = os.path.join(self.checkpoint_dir, f'netL_last.pkl')
-        netV_path = os.path.join(self.checkpoint_dir, f'netV_last.pkl')
-        netC_path = os.path.join(self.checkpoint_dir, f'netC_last.pkl')
-        
-        self.model.netD.save(netD_path)
-        self.model.netA.save(netA_path)
-        self.model.netL.save(netL_path)
-        self.model.netV.save(netV_path)
-        self.model.netC.save(netC_path)
+
+        params = {}
+        params['netD'] = self.get_params(self.model.netD)
+        params['netA'] = self.get_params(self.model.netA)
+        params['netL'] = self.get_params(self.model.netL)
+        params['netV'] = self.get_params(self.model.netV)
+        params['netC'] = self.get_params(self.model.netC)
+
+        epoch = str(epoch).rjust(3,'0')
+        with open(os.path.join(self.checkpoint_dir, f'checkpoint{epoch}.pkl'), 'wb') as f:
+            pickle.dump(params, f, pickle.HIGHEST_PROTOCOL)
+
         print(f"Saving checkpoint to {self.checkpoint_dir}")
 
     def test(self):
         """Perform testing."""
-        self.current_epoch = self.load_checkpoint(optim=False)
+        self.current_epoch = self.load_checkpoint()
         if self.test_result_dir is None:
-            self.test_result_dir = os.path.join(self.checkpoint_dir, f'test_results_{self.checkpoint_name}'.replace('.pth',''))
+            self.test_result_dir = os.path.join(self.checkpoint_dir, f'test_results_{self.checkpoint_name}'.replace('.pkl',''))
         print(f"Saving testing results to {self.test_result_dir}")
 
         with jt.no_grad():
-            m = self.run_epoch(self.test_loader, epoch=self.current_epoch, is_test=True)
+            m = self.run_epoch(self.test_loader, is_test=True)
 
         score_path = os.path.join(self.test_result_dir, 'eval_scores.txt')
         self.model.save_scores(score_path)
@@ -88,7 +105,7 @@ class Trainer():
 
         ## resume from checkpoint
         if self.resume:
-            self.load_checkpoint(optim=True)
+            self.load_checkpoint()
 
         ## initialize tensorboardX logger
         if self.use_logger:
@@ -110,9 +127,9 @@ class Trainer():
                 self.metrics_trace.append("val", metrics)
 
             if (epoch+1) % self.save_checkpoint_freq == 0:
-                self.save_checkpoint(epoch+1, optim=True)   
-            # self.metrics_trace.plot(pdf_path=os.path.join(self.checkpoint_dir, 'metrics.pdf'))
-            # self.metrics_trace.save(os.path.join(self.checkpoint_dir, 'metrics.json'))
+                self.save_checkpoint(epoch+1)
+            self.metrics_trace.plot(pdf_path=os.path.join(self.checkpoint_dir, 'metrics.pdf'))
+            self.metrics_trace.save(os.path.join(self.checkpoint_dir, 'metrics.json'))
 
         print(f"Training completed after {epoch+1} epochs.")
 
@@ -135,9 +152,17 @@ class Trainer():
                     self.model.forward(self.viz_input)
                     self.model.visualize(self.logger, total_iter=total_iter, max_bs=25)
 
+            jt.sync_all(True)
+            sta = time.time()
             m = self.model.forward(input)
+            jt.sync_all(True)
+            print(f"[*] Once forward costs {time.time()-sta} secs.")
             if is_train:
+                jt.sync_all(True)
+                sta = time.time()
                 self.model.backward()
+                jt.sync_all(True)
+                print(f"[*] Once backward costs {time.time()-sta} secs.")
             elif is_test:
                 self.model.save_results(self.test_result_dir)
 

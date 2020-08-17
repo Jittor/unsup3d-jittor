@@ -47,14 +47,12 @@ def xmkdir(path):
 
 
 def clean_checkpoint(checkpoint_dir, keep_num=2):
-    if keep_num > 0:
-        names = list(sorted(
-            glob.glob(os.path.join(checkpoint_dir, 'checkpoint*.pth'))
-        ))
-        if len(names) > keep_num:
-            for name in names[:-keep_num]:
-                print(f"Deleting obslete checkpoint file {name}")
-                os.remove(name)
+    names = list(sorted(glob.glob(os.path.join(checkpoint_dir, 'checkpoint*.pkl'))))
+    if len(names) > keep_num:
+        if keep_num > 0: names = names[:-keep_num]
+        for name in names:
+            print(f"Deleting obslete checkpoint file {name}")
+            os.remove(name)
 
 
 def archive_code(arc_path, filetypes=['.py', '.yml']):

@@ -5,7 +5,6 @@ run_train: true
 num_epochs: 200
 batch_size: 64
 checkpoint_dir: results/cat
-checkpoint_load_dir: results/cat
 save_checkpoint_freq: 10
 keep_num_checkpoint: 2
 resume: false

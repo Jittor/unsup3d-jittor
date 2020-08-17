@@ -3,7 +3,7 @@
 run_test: true
 batch_size: 64
 checkpoint_dir: results/cat
-checkpoint_name: checkpoint100.pth
+checkpoint_name: checkpoint100.pkl
 test_result_dir: results/cat/test_results_checkpoint100
 
 ## dataloader
