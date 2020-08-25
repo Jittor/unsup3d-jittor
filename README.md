@@ -26,7 +26,7 @@ python3.7 run.py --config experiments/test_synface.yml
 
 ## Pretrained model
 
-Here we provide our pretrained model trained using the default config experiments/train_synface.yml. You can run the following scripts to test Table 2 in the paper.
+Here we provide our pretrained synface model trained using the default config experiments/train_synface.yml. You can run the following scripts to test Table 2 in the paper.
 
 ```python
 bash pretrained/download_pretrained_synface.sh
