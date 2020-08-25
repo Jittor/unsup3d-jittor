@@ -28,7 +28,7 @@ xy_translation_range: 0.1  # (-t,t) in 3D
 z_translation_range: 0  # (-t,t) in 3D
 lam_perc: 1
 lam_flip: 0.5
-lr: 0.0001
+lr: 0.0002
 
 ## renderer
 rot_center_depth: 1.0

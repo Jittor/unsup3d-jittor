@@ -99,13 +99,14 @@ class Trainer():
         utils.dump_yaml(os.path.join(self.checkpoint_dir, 'configs.yml'), self.cfgs)
 
         ## initialize
+        start_epoch = 0
         self.metrics_trace.reset()
-        self.train_iter_per_epoch = len(self.train_loader)
+        self.train_iter_per_epoch = len(self.train_loader) // self.batch_size
         self.model.init_optimizers()
 
         ## resume from checkpoint
         if self.resume:
-            self.load_checkpoint()
+            start_epoch = self.load_checkpoint()
 
         ## initialize tensorboardX logger
         if self.use_logger:
@@ -117,7 +118,7 @@ class Trainer():
 
         ## run epochs
         print(f"{self.model.model_name}: optimizing to {self.num_epochs} epochs")
-        for epoch in range(self.num_epochs):
+        for epoch in range(start_epoch, self.num_epochs):
             self.current_epoch = epoch
             metrics = self.run_epoch(self.train_loader, epoch)
             self.metrics_trace.append("train", metrics)
@@ -146,28 +147,18 @@ class Trainer():
             self.model.set_eval()
 
         for iter, input in enumerate(loader):
+            m = self.model.forward(input)
+            if is_train:
+                self.model.backward()
+            elif is_test:
+                self.model.save_results(self.test_result_dir)
+
+            metrics.update(m, self.batch_size)
+            print(f"{'T' if is_train else 'V'}{epoch:02}/{iter:05}/{self.checkpoint_dir.split('/')[-1]}/{metrics}")
+
             if self.use_logger and is_train:
                 total_iter = iter + epoch*self.train_iter_per_epoch
                 if total_iter % self.log_freq == 0:
                     self.model.forward(self.viz_input)
                     self.model.visualize(self.logger, total_iter=total_iter, max_bs=25)
-
-            jt.sync_all(True)
-            sta = time.time()
-            m = self.model.forward(input)
-            jt.sync_all(True)
-            print(f"[*] Once forward costs {time.time()-sta} secs.")
-            if is_train:
-                jt.sync_all(True)
-                sta = time.time()
-                self.model.backward()
-                jt.sync_all(True)
-                print(f"[*] Once backward costs {time.time()-sta} secs.")
-            elif is_test:
-                self.model.save_results(self.test_result_dir)
-
-            metrics.update(m, self.batch_size)
-            print(f"{'T' if is_train else 'V'}{epoch:02}/{iter:05}/{metrics}")
-
-            
         return metrics

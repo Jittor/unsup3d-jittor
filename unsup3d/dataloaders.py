@@ -4,7 +4,6 @@ from jittor.dataset.dataset import Dataset
 import numpy as np
 from PIL import Image
 
-
 def get_data_loaders(cfgs):
     batch_size = cfgs.get('batch_size', 64)
     num_workers = cfgs.get('num_workers', 4)
@@ -32,7 +31,7 @@ def get_data_loaders(cfgs):
         assert os.path.isdir(train_data_dir), "Training data directory does not exist: %s" %train_data_dir
         assert os.path.isdir(val_data_dir), "Validation data directory does not exist: %s" %val_data_dir
         print(f"Loading training data from {train_data_dir}")
-        train_loader = get_loader(data_dir=train_data_dir, is_validation=True)
+        train_loader = get_loader(data_dir=train_data_dir, is_validation=False)
         print(f"Loading validation data from {val_data_dir}")
         val_loader = get_loader(data_dir=val_data_dir, is_validation=True)
     if run_test:
@@ -99,7 +98,6 @@ class ImageDataset(Dataset):
 
 
 def get_image_loader(data_dir, is_validation=False, batch_size=256, num_workers=0, image_size=256, crop=None):
-    print('>>>', not is_validation)
     return ImageDataset(data_dir, image_size=image_size, crop=crop, is_validation=is_validation).set_attrs(batch_size=batch_size, num_workers=num_workers, shuffle=not is_validation)
 
 ## paired AB image dataset ##
