@@ -17,6 +17,29 @@ bash install.sh
 python3.7 run.py --config experiments/train_synface.yml
 ```
 
+## Testing
+Check the configuration files in `experiments/` and run experiments, eg:
+
+```python
+python3.7 run.py --config experiments/test_synface.yml
+```
+
+## Pretrained model
+
+Here we provide our pretrained model trained using the default config experiments/train_synface.yml. You can run the following scripts to test Table 2 in the paper.
+
+```python
+bash pretrained/download_pretrained_synface.sh
+python3.7 run.py --config experiments/test_synface.yml
+```
+
+The following is SIDE and MAD compared with original paper (Table 2).
+
+|     | SIDE(×10−2) ↓  | MAD (deg.) ↓  |
+|  ----  | ----  | ----  |
+| Jittor  | 0.769±0.136 | 15.99±1.49 |
+| Original paper  | 0.793±0.140 | 16.51±1.56 |
+
 ## Citation
 ```
 @InProceedings{Wu_2020_CVPR,
