@@ -90,14 +90,11 @@ class ImageDataset(Dataset):
         hflip = not self.is_validation and np.random.rand()>0.5
         return self.transform(img, hflip=hflip)
 
-    def __len__(self):
-        return self.size
-
     def name(self):
         return 'ImageDataset'
 
 
-def get_image_loader(data_dir, is_validation=False, batch_size=256, num_workers=0, image_size=256, crop=None):
+def get_image_loader(data_dir, is_validation=False, batch_size=256, num_workers=2, image_size=256, crop=None):
     return ImageDataset(data_dir, image_size=image_size, crop=crop, is_validation=is_validation).set_attrs(batch_size=batch_size, num_workers=num_workers, shuffle=not is_validation)
 
 ## paired AB image dataset ##
@@ -163,7 +160,7 @@ class PairedDataset(Dataset):
 
 
 def get_paired_image_loader(data_dir, is_validation=False,
-    batch_size=256, num_workers=0, image_size=256, crop=None, AB_dnames=None, AB_fnames=None):
+    batch_size=256, num_workers=2, image_size=256, crop=None, AB_dnames=None, AB_fnames=None):
 
     return PairedDataset(data_dir, image_size=image_size, crop=crop, \
         is_validation=is_validation, AB_dnames=AB_dnames, AB_fnames=AB_fnames).set_attrs(batch_size=batch_size, num_workers=num_workers, shuffle=not is_validation)
