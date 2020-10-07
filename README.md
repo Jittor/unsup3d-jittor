@@ -11,8 +11,8 @@ Please remember to cite the corresponding papers if you use these datasets.
 Check the configuration files in `experiments/` and run experiments, eg:
 
 ```python
-git clone https://github.com/zhouwy19/unsup3d_jittor
-cd unsup3d_jittor
+git clone https://github.com/Jittor/unsup3d-jittor
+cd unsup3d-jittor
 bash install.sh
 python3.7 run.py --config experiments/train_synface.yml
 ```
