@@ -1,5 +1,5 @@
 import math
-import neural_renderer as nr
+import jrender as jr
 import numpy as np
 import jittor as jt
 from .utils import *
@@ -38,14 +38,15 @@ class Renderer():
         self.inv_K = jt.array(np.linalg.inv(np.array(K))).unsqueeze(0).float32()
         K = jt.array(K).float32()
         self.K = K.unsqueeze(0)
-        self.renderer = nr.Renderer(camera_mode='projection',
+        self.renderer = jr.Renderer(camera_mode='projection',
                                     light_intensity_ambient=1.0,
-                                    light_intensity_directional=0.,
+                                    light_intensity_directionals=0.,
                                     K=self.K, R=R, t=t,
                                     near=self.renderer_min_depth, far=self.renderer_max_depth,
                                     image_size=self.image_size, orig_size=self.image_size,
                                     fill_back=True,
-                                    background_color=[1,1,1])
+                                    background_color=[1,1,1],
+                                    dr_type='n3mr')
 
     def set_transform_matrices(self, view):
         self.rot_mat, self.trans_xyz = get_transform_matrices(view)
@@ -108,7 +109,7 @@ class Renderer():
         b, h, w = canon_depth.shape
         grid_3d = self.get_warped_3d_grid(canon_depth).reshape(b,-1,3)
         faces = get_face_idx(b, h, w)
-        warped_depth = self.renderer.render_depth(grid_3d, faces)[:,0]
+        warped_depth = self.renderer(grid_3d, faces, mode='depth')
 
         # allow some margin out of valid range
         margin = (self.max_depth - self.min_depth) /2
@@ -175,6 +176,6 @@ class Renderer():
 
             faces = get_face_idx(b, h, w)
             textures = get_textures_from_im(im, tx_size=self.tex_cube_size)
-            warped_images = self.renderer.render_rgb(grid_3d_i, faces, textures).clamp(min_v=-1., max_v=1.)
+            warped_images = self.renderer(grid_3d_i, faces, textures, mode='rgb').clamp(min_v=-1., max_v=1.)
             im_trans += [warped_images]
         return jt.stack(im_trans, 1)  # b x t x c x h x w
