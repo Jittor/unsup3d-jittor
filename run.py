@@ -1,5 +1,4 @@
 import argparse
-import neural_renderer as nr
 
 from unsup3d import setup_runtime, Trainer, Unsup3D
 import jittor as jt
